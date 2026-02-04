@@ -8,7 +8,7 @@ import java.util.List;
 
 public class EDA {
 
-    // ---------- Numeric parser ----------
+
     static double parse(String v) {
         if (v == null) return Double.NaN;
         v = v.replace("$", "")
@@ -19,12 +19,12 @@ public class EDA {
         return Double.parseDouble(v);
     }
 
-    // ---------- Utility: List → array ----------
+  
     static double[] toArray(List<Double> list) {
         return list.stream().mapToDouble(Double::doubleValue).toArray();
     }
 
-    // ---------- Univariate stats ----------
+  
     static void univariate(String name, double[] arr) {
         System.out.println("\nUNIVARIATE ANALYSIS : " + name);
         System.out.println("Mean : " + StatUtils.mean(arr));
@@ -94,7 +94,6 @@ public class EDA {
         univariate("FDV", fdvArr);
         univariate("Market Cap / FDV", mcFdvArr);
 
-        // =================================================
         System.out.println("\nBI-VARIATE ANALYSIS");
         PearsonsCorrelation pc = new PearsonsCorrelation();
 
