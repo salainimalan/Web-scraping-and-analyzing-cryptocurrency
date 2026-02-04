@@ -7,7 +7,7 @@ import java.util.*;
 
 public class EDA {
 
-    // ---------- Parse numeric safely ----------
+    
     static double parse(String v) {
         if (v == null) return Double.NaN;
         v = v.replace("$", "")
@@ -72,18 +72,18 @@ public class EDA {
         CSVReader reader = new CSVReader(new FileReader("crypto_data.csv"));
         String[] header = reader.readNext();
 
-        // ---------- Data map ----------
+        
         Map<String, List<Double>> data = new LinkedHashMap<>();
 
-        data.put(header[4], new ArrayList<>());   // Price
-        data.put(header[5], new ArrayList<>());   // 1h
-        data.put(header[6], new ArrayList<>());   // 24h
-        data.put(header[7], new ArrayList<>());   // 7d
-        data.put(header[8], new ArrayList<>());   // 30d
-        data.put(header[9], new ArrayList<>());   // Volume
-        data.put(header[10], new ArrayList<>());  // Market Cap
-        data.put(header[11], new ArrayList<>());  // FDV
-        data.put(header[12], new ArrayList<>());  // MC/FDV
+        data.put(header[4], new ArrayList<>());    
+        data.put(header[5], new ArrayList<>());    
+        data.put(header[6], new ArrayList<>());    
+        data.put(header[7], new ArrayList<>());    
+        data.put(header[8], new ArrayList<>());    
+        data.put(header[9], new ArrayList<>());    
+        data.put(header[10], new ArrayList<>());    
+        data.put(header[11], new ArrayList<>());   
+        data.put(header[12], new ArrayList<>());   
 
         String[] row;
         while ((row = reader.readNext()) != null) {
@@ -93,19 +93,19 @@ public class EDA {
             }
         }
 
-        // =================================================
+        
         System.out.println("VARIABLE IDENTIFICATION");
         System.out.println("Coin -> Categorical");
         for (String key : data.keySet()) {
             System.out.println(key + " -> Numerical");
         }
 
-        // =================================================
+        
         for (String key : data.keySet()) {
             univariate(key, toArray(data.get(key)));
         }
 
-        // =================================================
+        
         System.out.println("\nBI-VARIATE ANALYSIS");
         PearsonsCorrelation pc = new PearsonsCorrelation();
 
@@ -117,24 +117,23 @@ public class EDA {
         System.out.println("Price vs Volume     : " + pc.correlation(price, vol));
         System.out.println("Market Cap vs Volume: " + pc.correlation(mc, vol));
 
-        // =================================================
+       
         System.out.println("\nMISSING VALUE TREATMENT");
         for (String key : data.keySet()) {
             missingTreatment(key, toArray(data.get(key)));
         }
 
-        // =================================================
+        
         System.out.println("\nOUTLIER DETECTION (Z-SCORE)");
         for (String key : data.keySet()) {
             outlierDetection(key, toArray(data.get(key)));
         }
 
-        // =================================================
         for (String key : data.keySet()) {
             logTransform(key, toArray(data.get(key)));
         }
 
-        // =================================================
+      
         System.out.println("\nVARIABLE CREATION (Price / Market Cap)");
         System.out.println("Sample values:");
         for (int i = 0; i < 3; i++) {
@@ -144,5 +143,3 @@ public class EDA {
         System.out.println("\nEDA COMPLETED SUCCESSFULLY");
     }
 }
-
-
