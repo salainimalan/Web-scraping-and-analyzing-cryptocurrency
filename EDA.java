@@ -3,12 +3,11 @@ import org.apache.commons.math3.stat.StatUtils;
 import org.apache.commons.math3.stat.correlation.PearsonsCorrelation;
 
 import java.io.FileReader;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 public class EDA {
 
-
+    // ---------- Parse numeric safely ----------
     static double parse(String v) {
         if (v == null) return Double.NaN;
         v = v.replace("$", "")
@@ -19,12 +18,10 @@ public class EDA {
         return Double.parseDouble(v);
     }
 
-  
     static double[] toArray(List<Double> list) {
         return list.stream().mapToDouble(Double::doubleValue).toArray();
     }
 
-  
     static void univariate(String name, double[] arr) {
         System.out.println("\nUNIVARIATE ANALYSIS : " + name);
         System.out.println("Mean : " + StatUtils.mean(arr));
@@ -33,124 +30,119 @@ public class EDA {
         System.out.println("Std  : " + Math.sqrt(StatUtils.variance(arr)));
     }
 
-    public static void main(String[] args) throws Exception {
-
-        CSVReader reader = new CSVReader(new FileReader("crypto_data.csv"));
-        reader.readNext(); // skip header
-
-        // ---------------- DATA CONTAINERS ----------------
-        List<Double> price = new ArrayList<>();
-        List<Double> ch1h = new ArrayList<>();
-        List<Double> ch24h = new ArrayList<>();
-        List<Double> ch7d = new ArrayList<>();
-        List<Double> ch30d = new ArrayList<>();
-        List<Double> volume = new ArrayList<>();
-        List<Double> marketCap = new ArrayList<>();
-        List<Double> fdv = new ArrayList<>();
-        List<Double> mcFdv = new ArrayList<>();
-
-        String[] row;
-        while ((row = reader.readNext()) != null) {
-            price.add(parse(row[4]));
-            ch1h.add(parse(row[5]));
-            ch24h.add(parse(row[6]));
-            ch7d.add(parse(row[7]));
-            ch30d.add(parse(row[8]));
-            volume.add(parse(row[9]));
-            marketCap.add(parse(row[10]));
-            fdv.add(parse(row[11]));
-            mcFdv.add(parse(row[12]));
-        }
-
-        // Convert to arrays
-        double[] priceArr = toArray(price);
-        double[] ch1hArr = toArray(ch1h);
-        double[] ch24hArr = toArray(ch24h);
-        double[] ch7dArr = toArray(ch7d);
-        double[] ch30dArr = toArray(ch30d);
-        double[] volArr = toArray(volume);
-        double[] mcArr = toArray(marketCap);
-        double[] fdvArr = toArray(fdv);
-        double[] mcFdvArr = toArray(mcFdv);
-
-        // =================================================
-        System.out.println("VARIABLE IDENTIFICATION");
-        System.out.println("Coin              -> Categorical");
-        System.out.println("Price             -> Numerical");
-        System.out.println("1h, 24h, 7d, 30d  -> Numerical");
-        System.out.println("Volume            -> Numerical");
-        System.out.println("Market Cap        -> Numerical");
-        System.out.println("FDV               -> Numerical");
-        System.out.println("Market Cap / FDV  -> Numerical");
-
-        // =================================================
-        univariate("Price", priceArr);
-        univariate("1h Change", ch1hArr);
-        univariate("24h Change", ch24hArr);
-        univariate("7d Change", ch7dArr);
-        univariate("30d Change", ch30dArr);
-        univariate("24h Volume", volArr);
-        univariate("Market Cap", mcArr);
-        univariate("FDV", fdvArr);
-        univariate("Market Cap / FDV", mcFdvArr);
-
-        System.out.println("\nBI-VARIATE ANALYSIS");
-        PearsonsCorrelation pc = new PearsonsCorrelation();
-
-        System.out.println("Price vs Market Cap : " +
-                pc.correlation(priceArr, mcArr));
-        System.out.println("Price vs Volume     : " +
-                pc.correlation(priceArr, volArr));
-        System.out.println("Market Cap vs Volume: " +
-                pc.correlation(mcArr, volArr));
-        System.out.println("Price vs 24h Change : " +
-                pc.correlation(priceArr, ch24hArr));
-
-        // =================================================
-        System.out.println("\nMISSING VALUE TREATMENT");
-        double meanPrice = StatUtils.mean(priceArr);
-        int miss = 0;
-        for (int i = 0; i < priceArr.length; i++) {
-            if (Double.isNaN(priceArr[i])) {
-                priceArr[i] = meanPrice;
-                miss++;
+    static void missingTreatment(String name, double[] arr) {
+        double mean = StatUtils.mean(arr);
+        int count = 0;
+        for (int i = 0; i < arr.length; i++) {
+            if (Double.isNaN(arr[i])) {
+                arr[i] = mean;
+                count++;
             }
         }
-        System.out.println("Missing values replaced (Price): " + miss);
+        System.out.println(name + " → Missing values replaced: " + count);
+    }
 
-        // =================================================
-        System.out.println("\nOUTLIER DETECTION (Z-SCORE, PRICE)");
-        double std = Math.sqrt(StatUtils.variance(priceArr));
-        for (double v : priceArr) {
-            double z = (v - meanPrice) / std;
-            if (Math.abs(z) > 3)
-                System.out.println("Outlier : " + v);
-        }
-
-        // =================================================
-        System.out.println("\nVARIABLE TRANSFORMATION (LOG PRICE)");
-        System.out.println("Before -> After (sample values)");
-
+    static void outlierDetection(String name, double[] arr) {
+        double mean = StatUtils.mean(arr);
+        double std = Math.sqrt(StatUtils.variance(arr));
         int shown = 0;
-        for (double v : priceArr) {
-            if (v > 0 && shown < 5) {
+
+        for (double v : arr) {
+            double z = (v - mean) / std;
+            if (Math.abs(z) > 3 && shown < 3) {
+                System.out.println(name + " Outlier: " + v);
+                shown++;
+            }
+        }
+    }
+
+    static void logTransform(String name, double[] arr) {
+        System.out.println("\nLOG TRANSFORMATION : " + name);
+        int shown = 0;
+        for (double v : arr) {
+            if (v > 0 && shown < 3) {
                 System.out.println(v + " -> " + Math.log(v));
                 shown++;
             }
+        }
+    }
+
+    public static void main(String[] args) throws Exception {
+
+        CSVReader reader = new CSVReader(new FileReader("crypto_data.csv"));
+        String[] header = reader.readNext();
+
+        // ---------- Data map ----------
+        Map<String, List<Double>> data = new LinkedHashMap<>();
+
+        data.put(header[4], new ArrayList<>());   // Price
+        data.put(header[5], new ArrayList<>());   // 1h
+        data.put(header[6], new ArrayList<>());   // 24h
+        data.put(header[7], new ArrayList<>());   // 7d
+        data.put(header[8], new ArrayList<>());   // 30d
+        data.put(header[9], new ArrayList<>());   // Volume
+        data.put(header[10], new ArrayList<>());  // Market Cap
+        data.put(header[11], new ArrayList<>());  // FDV
+        data.put(header[12], new ArrayList<>());  // MC/FDV
+
+        String[] row;
+        while ((row = reader.readNext()) != null) {
+            int i = 4;
+            for (String key : data.keySet()) {
+                data.get(key).add(parse(row[i++]));
+            }
+        }
+
+        // =================================================
+        System.out.println("VARIABLE IDENTIFICATION");
+        System.out.println("Coin -> Categorical");
+        for (String key : data.keySet()) {
+            System.out.println(key + " -> Numerical");
+        }
+
+        // =================================================
+        for (String key : data.keySet()) {
+            univariate(key, toArray(data.get(key)));
+        }
+
+        // =================================================
+        System.out.println("\nBI-VARIATE ANALYSIS");
+        PearsonsCorrelation pc = new PearsonsCorrelation();
+
+        double[] price = toArray(data.get("Price"));
+        double[] mc = toArray(data.get("Market Cap"));
+        double[] vol = toArray(data.get("24h Volume"));
+
+        System.out.println("Price vs Market Cap : " + pc.correlation(price, mc));
+        System.out.println("Price vs Volume     : " + pc.correlation(price, vol));
+        System.out.println("Market Cap vs Volume: " + pc.correlation(mc, vol));
+
+        // =================================================
+        System.out.println("\nMISSING VALUE TREATMENT");
+        for (String key : data.keySet()) {
+            missingTreatment(key, toArray(data.get(key)));
+        }
+
+        // =================================================
+        System.out.println("\nOUTLIER DETECTION (Z-SCORE)");
+        for (String key : data.keySet()) {
+            outlierDetection(key, toArray(data.get(key)));
+        }
+
+        // =================================================
+        for (String key : data.keySet()) {
+            logTransform(key, toArray(data.get(key)));
         }
 
         // =================================================
         System.out.println("\nVARIABLE CREATION (Price / Market Cap)");
         System.out.println("Sample values:");
-        shown = 0;
-        for (int i = 0; i < priceArr.length && shown < 5; i++) {
-            if (mcArr[i] != 0 && !Double.isNaN(mcArr[i])) {
-                System.out.println(priceArr[i] / mcArr[i]);
-                shown++;
-            }
+        for (int i = 0; i < 3; i++) {
+            System.out.println(price[i] / mc[i]);
         }
 
         System.out.println("\nEDA COMPLETED SUCCESSFULLY");
     }
 }
+
 
